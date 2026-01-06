@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetic Retinopathy Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <i class="fas fa-eye-dropper header-icon"></i>
+                <h1>Diabetic Retinopathy Detection System</h1>
+                <p class="subtitle">AI-Powered Early Detection & Explainable Analysis</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Left Panel: Image Upload & Analysis -->
+        <div class="left-panel">
+            
+            <!-- Upload Section -->
+            <div class="card upload-card">
+                <div class="card-header">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h2>Upload Retinal Image</h2>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="drop-zone" id="dropZone">
+                            <i class="fas fa-image drop-icon"></i>
+                            <p class="drop-text">Drag & drop image here</p>
+                            <p class="drop-subtext">or click to browse</p>
+                            <input type="file" id="imageInput" name="image" accept=".jpg,.jpeg,.png" hidden>
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('imageInput').click()">
+                                <i class="fas fa-folder-open"></i> Browse Files
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Image Preview -->
+                    <div id="imagePreview" class="image-preview" style="display: none;">
+                        <img id="previewImg" src="" alt="Preview">
+                        <button class="btn-remove" onclick="removeImage()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Section -->
+            <div class="card prediction-card" id="predictionCard" style="display: none;">
+                <div class="card-header">
+                    <i class="fas fa-brain"></i>
+                    <h2>Prediction Results</h2>
+                </div>
+                <div class="card-body">
+                    <button id="predictBtn" class="btn btn-primary btn-block">
+                        <i class="fas fa-search"></i> Analyze DR Stage
+                    </button>
+                    
+                    <div id="predictionResult" class="result-box" style="display: none;">
+                        <div class="result-header">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Analysis Complete</span>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-item">
+                                <span class="result-label">Predicted Stage:</span>
+                                <span class="result-value" id="predictionClass">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Confidence:</span>
+                                <span class="result-value" id="confidenceScore">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grad-CAM Explainability Section -->
+            <div class="card gradcam-card" id="gradcamCard" style="display: none;">
+                <div class="card-header">
+                    <i class="fas fa-lightbulb"></i>
+                    <h2>Model Explainability</h2>
+                </div>
+                <div class="card-body">
+                    <button id="gradcamBtn" class="btn btn-info btn-block">
+                        <i class="fas fa-magic"></i> Show Grad-CAM Explanation
+                    </button>
+                    
+                    <div id="gradcamResult" class="gradcam-result" style="display: none;">
+                        <p class="gradcam-caption">
+                            <i class="fas fa-info-circle"></i>
+                            Highlighted regions influenced the model's decision
+                        </p>
+                        <div class="gradcam-images">
+                            <div class="gradcam-item">
+                                <h4>Heatmap</h4>
+                                <img id="heatmapImg" src="" alt="Heatmap">
+                            </div>
+                            <div class="gradcam-item">
+                                <h4>Overlay</h4>
+                                <img id="overlayImg" src="" alt="Overlay">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Panel: DR Chatbot -->
+        <div class="right-panel">
+            <div class="card chatbot-card">
+                <div class="card-header">
+                    <i class="fas fa-comment-medical"></i>
+                    <h2>DR Assistant</h2>
+                </div>
+                <div class="card-body chatbot-body">
+                    <div class="chatbot-disclaimer">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>This chatbot provides general guidance and is not a medical diagnosis. Please consult healthcare professionals for medical decisions.</p>
+                    </div>
+
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <p>Hello! I'm your DR Assistant. Ask me about:</p>
+                                <ul>
+                                    <li>What is Diabetic Retinopathy?</li>
+                                    <li>DR stages and symptoms</li>
+                                    <li>Prevention and precautions</li>
+                                    <li>Diet recommendations</li>
+                                    <li>Eye care tips</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <input type="text" id="chatInput" class="chat-input" placeholder="Ask about Diabetic Retinopathy...">
+                        <button id="sendBtn" class="btn-send">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let currentImagePath = null;
+        let currentFileName = null;
+
+        // =========================
+        // Image Upload & Preview
+        // =========================
+        const dropZone = document.getElementById('dropZone');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        // Click to upload
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== imageInput && !e.target.closest('button')) {
+                imageInput.click();
+            }
+        });
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a JPG or PNG image');
+                return;
+            }
+
+            currentFileName = file.name;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                dropZone.style.display = 'none';
+                imagePreview.style.display = 'block';
+                document.getElementById('predictionCard').style.display = 'block';
+                
+                // Reset results
+                document.getElementById('predictionResult').style.display = 'none';
+                document.getElementById('gradcamCard').style.display = 'none';
+                document.getElementById('gradcamResult').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+
+            // Store file for upload
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            imageInput.files = dataTransfer.files;
+        }
+
+        function removeImage() {
+            dropZone.style.display = 'flex';
+            imagePreview.style.display = 'none';
+            imageInput.value = '';
+            currentImagePath = null;
+            currentFileName = null;
+            document.getElementById('predictionCard').style.display = 'none';
+            document.getElementById('gradcamCard').style.display = 'none';
+        }
+
+        // =========================
+        // Prediction
+        // =========================
+        document.getElementById('predictBtn').addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('image', imageInput.files[0]);
+
+            showLoading();
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentImagePath = data.image_path;
+                    
+                    document.getElementById('predictionClass').textContent = data.prediction;
+                    document.getElementById('confidenceScore').textContent = data.confidence + '%';
+                    
+                    // Add color coding based on severity
+                    const predictionClass = document.getElementById('predictionClass');
+                    predictionClass.className = 'result-value';
+                    
+                    if (data.prediction === 'No_DR') {
+                        predictionClass.classList.add('status-no-dr');
+                    } else if (data.prediction === 'Mild') {
+                        predictionClass.classList.add('status-mild');
+                    } else if (data.prediction === 'Moderate') {
+                        predictionClass.classList.add('status-moderate');
+                    } else if (data.prediction === 'Severe' || data.prediction === 'Proliferate_DR') {
+                        predictionClass.classList.add('status-severe');
+                    }
+                    
+                    document.getElementById('predictionResult').style.display = 'block';
+                    document.getElementById('gradcamCard').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error making prediction: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // =========================
+        // Grad-CAM
+        // =========================
+        document.getElementById('gradcamBtn').addEventListener('click', async () => {
+            if (!currentImagePath) {
+                alert('Please make a prediction first');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/gradcam', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_path: currentImagePath })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('heatmapImg').src = data.heatmap + '?t=' + new Date().getTime();
+                    document.getElementById('overlayImg').src = data.overlay + '?t=' + new Date().getTime();
+                    document.getElementById('gradcamResult').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error generating Grad-CAM: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // =========================
+        // Chatbot
+        // =========================
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            chatInput.value = '';
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (data.reply) {
+                    addMessage(data.reply, 'bot');
+                } else {
+                    addMessage('Sorry, I could not get a response from the chatbot.', 'bot');
+                }
+
+            } catch (error) {
+                addMessage('Sorry, I could not connect to the server.', 'bot');
+            }
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${type}-message`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = type === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            chatMessages.appendChild(messageDiv);
+        }
+
+        // =========================
+        // Loading Overlay
+        // =========================
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
