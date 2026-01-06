@@ -9,10 +9,7 @@ import os
 import cv2
 import numpy as np
 import requests
-from dotenv import load_dotenv
 from groq import Groq
-# Load environment variables
-load_dotenv()
 
 # -----------------------------
 # Flask app
@@ -23,6 +20,8 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # Create upload folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "mobilenetv2_dr_checkpoint.pth")
 
 # -----------------------------
 # Device
@@ -50,7 +49,7 @@ mobilenet.classifier[1] = nn.Linear(
     mobilenet.classifier[1].in_features, 5
 )
 
-checkpoint = torch.load("mobilenetv2_dr_checkpoint.pth", map_location=device)
+checkpoint = torch.load(MODEL_PATH, map_location=device)
 
 if "state_dict" in checkpoint:
     mobilenet.load_state_dict(checkpoint["state_dict"])
@@ -346,3 +345,4 @@ def chat():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
