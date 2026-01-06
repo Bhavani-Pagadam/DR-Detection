@@ -43,15 +43,21 @@ class_names = [
 # -----------------------------
 # Load MobileNetV2 model
 # -----------------------------
+device = torch.device("cpu")
+
 mobilenet = mobilenet_v2(pretrained=False)
 mobilenet.classifier[1] = nn.Linear(
     mobilenet.classifier[1].in_features, 5
 )
 
 checkpoint = torch.load("mobilenetv2_dr_checkpoint.pth", map_location=device)
-mobilenet.load_state_dict(checkpoint["state_dict"])
 
-mobilenet = mobilenet.to(device)
+if "state_dict" in checkpoint:
+    mobilenet.load_state_dict(checkpoint["state_dict"])
+else:
+    mobilenet.load_state_dict(checkpoint)
+
+mobilenet.to(device)
 mobilenet.eval()
 
 # -----------------------------
@@ -338,4 +344,5 @@ def chat():
 # Run app
 # -----------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
